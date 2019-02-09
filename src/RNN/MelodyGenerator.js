@@ -9,18 +9,22 @@ const VELOCITY_BINS = 32;
 const MAX_SHIFT_STEPS = 100;
 const STEPS_PER_SECOND = 100;
 
+export const NOTE_ON = 'note_on';
+export const NOTE_OFF = 'note_off';
+export const TIME_SHIFT = 'time_shift';
+export const VELOCITY_CHANGE = 'velocity_change';
 const EVENT_RANGES = [
-    ['note_on', MIN_MIDI_PITCH, MAX_MIDI_PITCH],
-    ['note_off', MIN_MIDI_PITCH, MAX_MIDI_PITCH],
-    ['time_shift', 1, MAX_SHIFT_STEPS],
-    ['velocity_change', 1, VELOCITY_BINS],
+    [NOTE_ON, MIN_MIDI_PITCH, MAX_MIDI_PITCH],
+    [NOTE_OFF, MIN_MIDI_PITCH, MAX_MIDI_PITCH],
+    [TIME_SHIFT, 1, MAX_SHIFT_STEPS],
+    [VELOCITY_CHANGE, 1, VELOCITY_BINS],
 ];
 const EVENT_SIZE = EVENT_RANGES.reduce((size, eventRange) => {
     return size + (eventRange[2] - eventRange[1] + 1);
 }, 0);
 const PRIMER_IDX = 355; // shift 1s.
 
-export default class RNNMelodyGenerator {
+export default class MelodyGenerator {
     MODEL_URL = 'https://storage.googleapis.com/download.magenta.tensorflow.org/models/performance_rnn/tfjs';
 
     constructor() {
@@ -121,25 +125,25 @@ export default class RNNMelodyGenerator {
         for (const eventRange of EVENT_RANGES) {
             const [eventType, minValue, maxValue] = eventRange;
             if (offset <= index && index <= offset + maxValue - minValue) {
-                if (eventType === 'note_on') {
+                if (eventType === NOTE_ON) {
                     return {
                         event: eventType,
                         note: index - offset,
                     };
-                } else if (eventType === 'note_off') {
+                } else if (eventType === NOTE_OFF) {
                     return {
                         event: eventType,
                         note: index - offset,
                     };
-                } else if (eventType === 'time_shift') {
+                } else if (eventType === TIME_SHIFT) {
                     return {
                         event: eventType,
-                        shift: (index - offset + 1) / STEPS_PER_SECOND,
+                        value: (index - offset + 1) / STEPS_PER_SECOND,
                     };
-                } else if (eventType === 'velocity_change') {
+                } else if (eventType === VELOCITY_CHANGE) {
                     return {
                         event: eventType,
-                        velocity: (index - offset + 1) * Math.ceil(127 / VELOCITY_BINS),
+                        value: (index - offset + 1) * Math.ceil(127 / VELOCITY_BINS),
                     };
                 } else {
                     throw new Error(`Could not decode eventType: ${eventType}`);
