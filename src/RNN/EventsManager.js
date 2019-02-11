@@ -10,11 +10,14 @@ const MAX_NOTE_LENGTH = 3;
 
 
 export default class EventsManager {
-    constructor({ player, rnn, timeScale = 2 }) {
-        this.player = player;
+    constructor({ device, rnn, timeScale = 2 }) {
+        this.device = device;
         this.rnn = rnn;
         this.timeScale = timeScale;
         this.events = [];
+
+        this.device.$on(NOTE_ON, this.onDeviceNoteOn.bind(this));
+        this.device.$on(NOTE_OFF, this.onDeviceNoteOff.bind(this));
     }
 
     generate(seconds) {
@@ -24,7 +27,7 @@ export default class EventsManager {
             const event = this.rnn.generateStep();
             this.events.push(event);
             if (event.event === TIME_SHIFT) {
-                curSeconds += event.value;
+                curSeconds += event.value * this.timeScale;
             }
         }
     }
@@ -33,8 +36,8 @@ export default class EventsManager {
         let velocity = START_VELOCITY;
         let time = 0;
         const activeNotes = {};
-        const noteOn = this.player.noteOn.bind(this.player);
-        const noteOff = this.player.noteOff.bind(this.player);
+        const noteOn = this.device.noteOn.bind(this.device);
+        const noteOff = this.device.noteOff.bind(this.device);
 
         this.events.forEach((event) => {
             switch (event.event) {
@@ -54,7 +57,6 @@ export default class EventsManager {
                     _.pickBy(activeNotes, noteTime => (time - noteTime) >= MAX_NOTE_LENGTH),
                     (noteTime, note) => {
                         delete activeNotes[note];
-                        console.warn(`Note ${note} player longer then ${MAX_NOTE_LENGTH} seconds`)
                         _.delay(noteOff, time * 1000 * this.timeScale, note);
                     },
                 );
@@ -67,5 +69,13 @@ export default class EventsManager {
             }
         });
         // TODO: noteOff all activeNotes in 3 seconds
+    }
+
+    onDeviceNoteOn(event) {
+        console.log(this, event, 'onDeviceNoteOn');
+    }
+
+    onDeviceNoteOff(event) {
+        console.log(this, event, 'onDeviceNoteOff');
     }
 }

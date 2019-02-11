@@ -1,7 +1,7 @@
 <template>
     <b-nav-text>
-        <fa-icon icon="volume-up"></fa-icon>
-        {{inputName}}
+        <fa-icon icon="keyboard"></fa-icon>
+        {{outputName}}
     </b-nav-text>
 </template>
 
@@ -18,9 +18,10 @@ class InputDevicesSelector extends Vue {
         this.devices = this.$MIDI;
     }
 
-    get inputName() {
-        if (this.devices.currentInput) {
-            return this.devices.currentInput.name;
+    get outputName() {
+        const output = this.devices.currentOutput;
+        if (output && output.initalized) {
+            return output.name;
         }
         return 'Loading...';
     }

@@ -21,14 +21,14 @@ export default @Component
 class MelodyGuess extends Vue {
     ready = false;
     error = null;
-    generateSeconds = 5;
+    generateSeconds = 10;
     eventsManager = null;
 
     async created() {
         try {
             const rnn = new MelodyGenerator();
             await rnn.init();
-            this.eventsManager = new EventsManager({ player: this.$MIDI, rnn });
+            this.eventsManager = new EventsManager({ device: this.$MIDI, rnn });
             this.ready = true;
         } catch (error) {
             this.error = error.message;

@@ -126,27 +126,24 @@ export default class MelodyGenerator {
         for (const eventRange of EVENT_RANGES) {
             const [eventType, minValue, maxValue] = eventRange;
             if (offset <= index && index <= offset + maxValue - minValue) {
-                if (eventType === NOTE_ON) {
+                switch (eventType) {
+                case NOTE_ON:
+                case NOTE_OFF:
                     return {
                         event: eventType,
                         note: index - offset,
                     };
-                } else if (eventType === NOTE_OFF) {
-                    return {
-                        event: eventType,
-                        note: index - offset,
-                    };
-                } else if (eventType === TIME_SHIFT) {
+                case TIME_SHIFT:
                     return {
                         event: eventType,
                         value: (index - offset + 1) / STEPS_PER_SECOND,
                     };
-                } else if (eventType === VELOCITY_CHANGE) {
+                case VELOCITY_CHANGE:
                     return {
                         event: eventType,
                         value: (index - offset + 1) * Math.ceil(127 / VELOCITY_BINS),
                     };
-                } else {
+                default:
                     throw new Error(`Could not decode eventType: ${eventType}`);
                 }
             }
