@@ -1,6 +1,8 @@
 import _ from 'lodash';
 
-import { NOTE_ON, NOTE_OFF, TIME_SHIFT, VELOCITY_CHANGE } from './MelodyGenerator';
+import {
+    NOTE_ON, NOTE_OFF, TIME_SHIFT, VELOCITY_CHANGE,
+} from './MelodyGenerator';
 
 const START_VELOCITY = 100;
 const MAX_VELOCITY = 127;
@@ -64,5 +66,6 @@ export default class EventsManager {
                 break;
             }
         });
+        // TODO: noteOff all activeNotes in 3 seconds
     }
 }

@@ -4,11 +4,13 @@ import BootstrapVue from 'bootstrap-vue';
 import App from './App.vue';
 import router from './router';
 import store from './store';
+import MIDIDevice from './libs/MIDIDevice';
 
 import 'bootstrap/dist/css/bootstrap.css';
 import 'bootstrap-vue/dist/bootstrap-vue.css';
 
 Vue.use(BootstrapVue);
+Vue.use(MIDIDevice);
 
 Vue.config.productionTip = false;
 

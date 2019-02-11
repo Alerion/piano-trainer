@@ -7,11 +7,16 @@ const MAX_VELOCITY = 127;
 
 export default class PianoPlayer {
     constructor() {
+        this.name = 'Virtual Piano';
         this.piano = new Piano({ velocities: 4 }).toMaster();
+        this.initalized = false;
     }
 
     async init() {
-        await this.piano.load(SALAMANDER_URL);
+        if (!this.initalized) {
+            await this.piano.load(SALAMANDER_URL);
+            this.initalized = true;
+        }
     }
 
     noteOn(note, velocity) {
