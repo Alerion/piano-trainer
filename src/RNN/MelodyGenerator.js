@@ -25,7 +25,8 @@ const EVENT_SIZE = EVENT_RANGES.reduce((size, eventRange) => {
 const PRIMER_IDX = 355; // shift 1s.
 
 export default class MelodyGenerator {
-    MODEL_URL = 'https://storage.googleapis.com/download.magenta.tensorflow.org/models/performance_rnn/tfjs';
+    // MODEL_URL = 'https://storage.googleapis.com/download.magenta.tensorflow.org/models/performance_rnn/tfjs';
+    MODEL_URL = '/rnn/';
 
     constructor() {
         this.noteDensityIdx = 0;
