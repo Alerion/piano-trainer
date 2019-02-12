@@ -3,26 +3,33 @@ import _ from 'lodash';
 import {
     NOTE_ON, NOTE_OFF, TIME_SHIFT, VELOCITY_CHANGE,
 } from './MelodyGenerator';
+import Result from './Result';
 
 const START_VELOCITY = 100;
 const MAX_VELOCITY = 127;
 const MAX_NOTE_LENGTH = 3;
+const INPUT_RESET_TIME = 5 * 1000;
 
 
 export default class EventsManager {
-    constructor({ device, rnn, timeScale = 1 }) {
+    constructor({ device, rnn, onResult, timeScale = 1 }) {
         this.device = device;
         this.rnn = rnn;
         this.timeScale = timeScale;
         this.events = [];
 
+        this.lastInputTime = null;
+        this.inputEvents = [];
         this.device.$on(NOTE_ON, this.onDeviceNoteOn.bind(this));
         this.device.$on(NOTE_OFF, this.onDeviceNoteOff.bind(this));
+        this.onResult = onResult;
     }
 
     generate(seconds) {
         this.events = [];
+        this.inputEvents = [];
         let curSeconds = 0;
+
         while (curSeconds < seconds && this.events.length < 1000) {
             const events = this.rnn.generateSteps();
             events.forEach((event) => {
@@ -44,7 +51,6 @@ export default class EventsManager {
         this.events.forEach((event) => {
             switch (event.event) {
             case NOTE_ON:
-                console.log(event.event, event.note, time, velocity);
                 activeNotes[event.note] = time;
                 _.delay(noteOn, time * 1000 * this.timeScale, event.note, velocity);
                 break;
@@ -55,7 +61,6 @@ export default class EventsManager {
                 }
                 break;
             case TIME_SHIFT:
-                console.log(event.event, event.value)
                 time += event.value;
                 _.forOwn(
                     _.pickBy(activeNotes, noteTime => (time - noteTime) >= MAX_NOTE_LENGTH),
@@ -76,10 +81,27 @@ export default class EventsManager {
     }
 
     onDeviceNoteOn(event) {
-        console.log(this, event, 'onDeviceNoteOn');
+        if (this.events.length === 0) {
+            return;
+        }
+        // FIXME: add this to timeout to show result automatically
+        if (this.lastInputTime
+                && (new Date() - this.lastInputTime) > INPUT_RESET_TIME
+                && this.inputEvents.length) {
+            this.inputEvents = [];
+        }
+
+        this.lastInputTime = new Date();
+        this.inputEvents.push(event);
     }
 
-    onDeviceNoteOff(event) {
-        console.log(this, event, 'onDeviceNoteOff');
+    onDeviceNoteOff = this.onDeviceNoteOn;
+
+    checkInput() {
+        const result = new Result({
+            inputs: this.inputEvents.slice(),
+            target: this.events.slice(),
+        });
+        this.onResult(result);
     }
 }
