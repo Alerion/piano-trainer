@@ -23,18 +23,27 @@ const EVENT_SIZE = EVENT_RANGES.reduce((size, eventRange) => {
     return size + (eventRange[2] - eventRange[1] + 1);
 }, 0);
 const PRIMER_IDX = 355; // shift 1s.
+// How many steps to generate per generateStep call.
+// Generating more steps makes it less likely that we'll lag behind in note
+// generation. Generating fewer steps makes it less likely that the browser UI
+// thread will be starved for cycles.
+const STEPS_PER_GENERATE_CALL = 10;
+
 
 export default class MelodyGenerator {
     // MODEL_URL = 'https://storage.googleapis.com/download.magenta.tensorflow.org/models/performance_rnn/tfjs';
     MODEL_URL = '/rnn/';
 
     constructor() {
-        this.noteDensityIdx = 0;
+        this.noteDensityIdx = 1;
+        // C major: [2, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1]
+        // F major: [1, 0, 1, 0, 1, 2, 0, 1, 0, 1, 1, 0]
+        // D minor: [1, 0, 2, 0, 1, 1, 0, 1, 0, 1, 1, 0]
+        // Whole ton: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]
+        // Pentatonic: [0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0]
         this.pitchHistogram = [2, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1];
         this.conditioning = this.calcConditioning();
-        this.lstm1 = null;
-        this.lstm2 = null;
-        this.lstm3 = null;
+
         this.fcB = null;
         this.fcW = null;
         this.c = null;
@@ -51,30 +60,26 @@ export default class MelodyGenerator {
         const response = await fetch(`${this.MODEL_URL}/weights_manifest.json`);
         const manifest = await response.json();
         const vars = await tf.loadWeights(manifest, this.MODEL_URL);
-        const kernel1 = vars['rnn/multi_rnn_cell/cell_0/basic_lstm_cell/kernel'];
-        const bias1 = vars['rnn/multi_rnn_cell/cell_0/basic_lstm_cell/bias'];
-        const kernel2 = vars['rnn/multi_rnn_cell/cell_1/basic_lstm_cell/kernel'];
-        const bias2 = vars['rnn/multi_rnn_cell/cell_1/basic_lstm_cell/bias'];
-        const kernel3 = vars['rnn/multi_rnn_cell/cell_2/basic_lstm_cell/kernel'];
-        const bias3 = vars['rnn/multi_rnn_cell/cell_2/basic_lstm_cell/bias'];
-        const forgetBias = tf.scalar(1.0);
-
-        this.lstm1 = (data, c, h) => tf.basicLSTMCell(forgetBias, kernel1, bias1, data, c, h);
-        this.lstm2 = (data, c, h) => tf.basicLSTMCell(forgetBias, kernel2, bias2, data, c, h);
-        this.lstm3 = (data, c, h) => tf.basicLSTMCell(forgetBias, kernel3, bias3, data, c, h);
+        this.kernel1 = vars['rnn/multi_rnn_cell/cell_0/basic_lstm_cell/kernel'];
+        this.bias1 = vars['rnn/multi_rnn_cell/cell_0/basic_lstm_cell/bias'];
+        this.kernel2 = vars['rnn/multi_rnn_cell/cell_1/basic_lstm_cell/kernel'];
+        this.bias2 = vars['rnn/multi_rnn_cell/cell_1/basic_lstm_cell/bias'];
+        this.kernel3 = vars['rnn/multi_rnn_cell/cell_2/basic_lstm_cell/kernel'];
+        this.bias3 = vars['rnn/multi_rnn_cell/cell_2/basic_lstm_cell/bias'];
+        this.forgetBias = tf.scalar(1.0);
 
         this.fcB = vars['fully_connected/biases'];
         this.fcW = vars['fully_connected/weights'];
         // Reset RNN
         this.c = [
-            tf.zeros([1, bias1.shape[0] / 4]),
-            tf.zeros([1, bias2.shape[0] / 4]),
-            tf.zeros([1, bias3.shape[0] / 4]),
+            tf.zeros([1, this.bias1.shape[0] / 4]),
+            tf.zeros([1, this.bias2.shape[0] / 4]),
+            tf.zeros([1, this.bias3.shape[0] / 4]),
         ];
         this.h = [
-            tf.zeros([1, bias1.shape[0] / 4]),
-            tf.zeros([1, bias2.shape[0] / 4]),
-            tf.zeros([1, bias3.shape[0] / 4]),
+            tf.zeros([1, this.bias1.shape[0] / 4]),
+            tf.zeros([1, this.bias2.shape[0] / 4]),
+            tf.zeros([1, this.bias3.shape[0] / 4]),
         ];
         this.lastSample = tf.scalar(PRIMER_IDX, 'int32');
     }
@@ -94,31 +99,52 @@ export default class MelodyGenerator {
         const pitchHistogramEncoding = buffer.toTensor();
 
         return tf.tidy(() => {
-            const size = 1 + noteDensityEncoding.shape[0] + pitchHistogramEncoding.shape[0];
-            return tf.oneHot(tf.tensor1d([0], 'int32'), size).as1D();
+            const axis = 0;
+            const conditioningValues = noteDensityEncoding.concat(pitchHistogramEncoding, axis);
+            return tf.tensor1d([0], 'int32').concat(conditioningValues, axis);
         });
     }
 
-    generateStep() {
-        [this.c, this.h, this.lastSample] = tf.tidy(() => {
-            // Use last sampled output as the next input.
-            const eventInput = tf.oneHot(this.lastSample.as1D(), EVENT_SIZE).as1D();
-            const axis = 0;
-            const input = this.conditioning.concat(eventInput, axis).toFloat();
-            const output = tf.multiRNNCell(
-                [this.lstm1, this.lstm2, this.lstm3], input.as2D(1, -1), this.c, this.h,
-            );
-            const outputH = this.h[2];
-            const logits = outputH.matMul(this.fcW).add(this.fcB);
-            const sampledOutput = tf.multinomial(logits.as1D(), 1).asScalar();
+    generateSteps() {
+        const {
+            fcB, fcW, conditioning, forgetBias, kernel1, kernel2, kernel3, bias1, bias2, bias3,
+        } = this;
+        const lstm1 = (data, c, h) => tf.basicLSTMCell(forgetBias, kernel1, bias1, data, c, h);
+        const lstm2 = (data, c, h) => tf.basicLSTMCell(forgetBias, kernel2, bias2, data, c, h);
+        const lstm3 = (data, c, h) => tf.basicLSTMCell(forgetBias, kernel3, bias3, data, c, h);
+        let { c, h, lastSample } = this;
+        let outputs = [];
 
-            this.c.forEach(c => c.dispose());
-            this.h.forEach(h => h.dispose());
-            this.lastSample.dispose();
 
-            return [output[0], output[1], sampledOutput];
+        [this.c, this.h, this.lastSample, outputs] = tf.tidy(() => {
+            // Generate some notes.
+            const innerOuts = [];
+            for (let i = 0; i < STEPS_PER_GENERATE_CALL; i++) {
+                // Use last sampled output as the next input.
+                const eventInput = tf.oneHot(lastSample.as1D(), EVENT_SIZE).as1D();
+                // Dispose the last sample from the previous generate call, since we kept it.
+                if (i === 0) {
+                    lastSample.dispose();
+                }
+
+                const axis = 0;
+                const input = conditioning.concat(eventInput, axis).toFloat();
+                const output = tf.multiRNNCell([lstm1, lstm2, lstm3], input.as2D(1, -1), c, h);
+                c.forEach(item => item.dispose());
+                h.forEach(item => item.dispose());
+                [c, h] = output;
+
+                const outputH = h[2];
+                const logits = outputH.matMul(fcW).add(fcB);
+
+                const sampledOutput = tf.multinomial(logits.as1D(), 1).asScalar();
+
+                innerOuts.push(sampledOutput);
+                lastSample = sampledOutput;
+            }
+            return [c, h, lastSample, innerOuts];
         });
-        return this.decodeSample(this.lastSample.dataSync()[0]);
+        return outputs.map(item => this.decodeSample(item.dataSync()[0]));
     }
 
     decodeSample(index) {

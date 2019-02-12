@@ -10,7 +10,7 @@ const MAX_NOTE_LENGTH = 3;
 
 
 export default class EventsManager {
-    constructor({ device, rnn, timeScale = 2 }) {
+    constructor({ device, rnn, timeScale = 1 }) {
         this.device = device;
         this.rnn = rnn;
         this.timeScale = timeScale;
@@ -24,11 +24,13 @@ export default class EventsManager {
         this.events = [];
         let curSeconds = 0;
         while (curSeconds < seconds && this.events.length < 1000) {
-            const event = this.rnn.generateStep();
-            this.events.push(event);
-            if (event.event === TIME_SHIFT) {
-                curSeconds += event.value * this.timeScale;
-            }
+            const events = this.rnn.generateSteps();
+            events.forEach((event) => {
+                this.events.push(event);
+                if (event.event === TIME_SHIFT) {
+                    curSeconds += event.value * this.timeScale;
+                }
+            });
         }
     }
 
@@ -42,6 +44,7 @@ export default class EventsManager {
         this.events.forEach((event) => {
             switch (event.event) {
             case NOTE_ON:
+                console.log(event.event, event.note, time, velocity);
                 activeNotes[event.note] = time;
                 _.delay(noteOn, time * 1000 * this.timeScale, event.note, velocity);
                 break;
@@ -52,6 +55,7 @@ export default class EventsManager {
                 }
                 break;
             case TIME_SHIFT:
+                console.log(event.event, event.value)
                 time += event.value;
                 _.forOwn(
                     _.pickBy(activeNotes, noteTime => (time - noteTime) >= MAX_NOTE_LENGTH),
