@@ -27,7 +27,7 @@ const PRIMER_IDX = 355; // shift 1s.
 // Generating more steps makes it less likely that we'll lag behind in note
 // generation. Generating fewer steps makes it less likely that the browser UI
 // thread will be starved for cycles.
-const STEPS_PER_GENERATE_CALL = 100;
+const STEPS_PER_GENERATE_CALL = 10;
 
 
 export default class MelodyGenerator {

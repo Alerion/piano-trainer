@@ -8,7 +8,7 @@ import Result from './Result';
 const START_VELOCITY = 100;
 const MAX_VELOCITY = 127;
 const MAX_NOTE_LENGTH = 3;
-const INPUT_RESET_TIME = 5 * 1000;
+const INPUT_RESET_TIME = 3 * 1000;
 
 
 export default class EventsManager {
@@ -18,7 +18,6 @@ export default class EventsManager {
         this.timeScale = timeScale;
         this.events = [];
 
-        this.lastInputTime = null;
         this.inputEvents = [];
         this.device.$on(NOTE_ON, this.onDeviceNoteOn.bind(this));
         this.device.$on(NOTE_OFF, this.onDeviceNoteOff.bind(this));
@@ -39,6 +38,11 @@ export default class EventsManager {
                 }
             });
         }
+
+        return new Result({
+            inputs: [],
+            target: this.events.slice(),
+        });
     }
 
     play() {
@@ -84,14 +88,11 @@ export default class EventsManager {
         if (this.events.length === 0) {
             return;
         }
-        // FIXME: add this to timeout to show result automatically
-        if (this.lastInputTime
-                && (new Date() - this.lastInputTime) > INPUT_RESET_TIME
-                && this.inputEvents.length) {
-            this.inputEvents = [];
+
+        if (this.inputEvents.length === 0) {
+            _.delay(this.checkInput.bind(this), INPUT_RESET_TIME);
         }
 
-        this.lastInputTime = new Date();
         this.inputEvents.push(event);
     }
 
@@ -102,6 +103,7 @@ export default class EventsManager {
             inputs: this.inputEvents.slice(),
             target: this.events.slice(),
         });
+        this.inputEvents = [];
         this.onResult(result);
     }
 }

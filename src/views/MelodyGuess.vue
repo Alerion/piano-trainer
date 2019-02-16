@@ -1,14 +1,20 @@
 <template>
-    <div>
+    <b-container fluid>
         <b-alert variant="danger" :show="error">{{error}}</b-alert>
         <b-alert :show="!ready && !error">Loading...</b-alert>
 
         <template v-if="!error && ready">
-            <b-button @click="generate">Generate {{generateSeconds}} seconds</b-button>
-            <b-alert :show="!!status">{{status}}</b-alert>
-            <result-display :result="result" v-if="result"></result-display>
+            <b-row>
+                <b-col cols="3" class="sidebar">
+                    <b-button @click="generate">Generate melody</b-button>
+                    <b-alert :show="!!status">{{status}}</b-alert>
+                </b-col>
+                <b-col>
+                    <result-display :result="result" v-if="result"></result-display>
+                </b-col>
+            </b-row>
         </template>
-    </div>
+    </b-container>
 </template>
 
 <script>
@@ -31,9 +37,8 @@ class MelodyGuess extends Vue {
     result = null;
     status = null;
 
-    generateSeconds = 10;
+    generateSeconds = 3;
     eventsManager = null;
-
 
     async created() {
         try {
@@ -53,7 +58,7 @@ class MelodyGuess extends Vue {
     generate() {
         // TODO: Force status display
         this.status = 'Generating melody...';
-        this.eventsManager.generate(this.generateSeconds);
+        this.result = this.eventsManager.generate(this.generateSeconds);
         this.status = null;
         this.eventsManager.play();
         this.status = 'Enter melody please';
@@ -61,6 +66,17 @@ class MelodyGuess extends Vue {
 
     onResult(result) {
         this.result = result;
+        if (this.result.isValid) {
+            this.status = 'You win!';
+        }
     }
 }
 </script>
+
+<style lang="scss" scoped>
+.sidebar {
+    .alert {
+        margin-top: 10px;
+    }
+}
+</style>
