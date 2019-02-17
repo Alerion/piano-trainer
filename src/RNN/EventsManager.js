@@ -8,11 +8,11 @@ import Result from './Result';
 const START_VELOCITY = 100;
 const MAX_VELOCITY = 127;
 const MAX_NOTE_LENGTH = 3;
-const INPUT_RESET_TIME = 3 * 1000;
+const INPUT_RESET_TIME = 2;
 
 
 export default class EventsManager {
-    constructor({ device, rnn, onResult, timeScale = 1 }) {
+    constructor({ device, rnn, timeScale = 1 }) {
         this.device = device;
         this.rnn = rnn;
         this.timeScale = timeScale;
@@ -21,7 +21,6 @@ export default class EventsManager {
         this.inputEvents = [];
         this.device.$on(NOTE_ON, this.onDeviceNoteOn.bind(this));
         this.device.$on(NOTE_OFF, this.onDeviceNoteOff.bind(this));
-        this.onResult = onResult;
     }
 
     generate(seconds) {
@@ -39,10 +38,10 @@ export default class EventsManager {
             });
         }
 
-        return new Result({
-            inputs: [],
-            target: this.events.slice(),
+        this.result = new Result({
+            target: this.events,
         });
+        return this.result;
     }
 
     play() {
@@ -90,7 +89,7 @@ export default class EventsManager {
         }
 
         if (this.inputEvents.length === 0) {
-            _.delay(this.checkInput.bind(this), INPUT_RESET_TIME);
+            _.delay(this.checkInput.bind(this), INPUT_RESET_TIME * 1000);
         }
 
         this.inputEvents.push(event);
@@ -99,11 +98,7 @@ export default class EventsManager {
     onDeviceNoteOff = this.onDeviceNoteOn;
 
     checkInput() {
-        const result = new Result({
-            inputs: this.inputEvents.slice(),
-            target: this.events.slice(),
-        });
+        this.result.addInputs(this.inputEvents);
         this.inputEvents = [];
-        this.onResult(result);
     }
 }

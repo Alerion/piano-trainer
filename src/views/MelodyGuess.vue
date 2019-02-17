@@ -6,10 +6,12 @@
         <template v-if="!error && ready">
             <b-row>
                 <b-col cols="3" class="sidebar">
-                    <b-button @click="generate">Generate melody</b-button>
+                    <b-button @click="generate">Generate</b-button>
+                    <b-button @click="play" class="btn-play">Play</b-button>
                     <b-alert :show="!!status">{{status}}</b-alert>
                 </b-col>
                 <b-col>
+                    <b-alert :show="isCompleted" variant="success">Melody completed!</b-alert>
                     <result-display :result="result" v-if="result"></result-display>
                 </b-col>
             </b-row>
@@ -64,11 +66,16 @@ class MelodyGuess extends Vue {
         this.status = 'Enter melody please';
     }
 
-    onResult(result) {
-        this.result = result;
-        if (this.result.isValid) {
-            this.status = 'You win!';
+    play() {
+        if (!this.result) {
+            this.generate();
+        } else {
+            this.eventsManager.play();
         }
+    }
+
+    get isCompleted() {
+        return this.result && this.result.isValid;
     }
 }
 </script>
@@ -77,6 +84,10 @@ class MelodyGuess extends Vue {
 .sidebar {
     .alert {
         margin-top: 10px;
+    }
+
+    .btn-play {
+        margin-left: 10px;
     }
 }
 </style>

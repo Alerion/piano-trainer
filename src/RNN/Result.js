@@ -1,39 +1,51 @@
+import _ from 'lodash';
 import { Frequency } from 'tone';
-import { NOTE_ON, NOTE_OFF, TIME_SHIFT, VELOCITY_CHANGE } from './MelodyGenerator';
+
+import {
+    NOTE_ON, NOTE_OFF, TIME_SHIFT, VELOCITY_CHANGE,
+} from './MelodyGenerator';
+
+
+function isValid(events) {
+    return _.every(events, event => event.isValid);
+}
+
+
+function prepareEvents(events) {
+    return events.filter(event => event.event === NOTE_ON).map((event) => {
+        return {
+            note: Frequency(event.note, 'midi').toNote(),
+            isValid: false,
+        };
+    });
+}
 
 
 export default class Result {
-    constructor({ inputs, target }) {
-        this.inputs = this.cleanInputs(inputs);
-        this.target = this.cleanTarget(target);
+    constructor({ target }) {
+        this.validInputs = [];
+        this.currentInput = [];
+        this.targets = prepareEvents(target);
         this.isValid = false;
-        this.compare();
     }
 
-    compare() {
-        this.inputs.forEach((event, i) => {
-            const target = this.target[i];
-            event.isValid = target.isValid = (target && target.note === event.note);
+    addInputs(inputs) {
+        const events = prepareEvents(inputs);
+        const targets = this.targets.slice(this.validInputs.length);
+        events.forEach((event, i) => {
+            const target = targets[i];
+            event.isValid = (target && target.note === event.note);
         });
 
-        this.isValid = _.every(this.target, event => event.isValid);
-    }
+        if (isValid(events)) {
+            this.validInputs = this.validInputs.concat(events);
+            this.currentInput = [];
+        } else {
+            this.currentInput = events;
+        }
 
-    cleanTarget(target) {
-        return target.filter(event => event.event === NOTE_ON).map((event) => {
-            return {
-                note: Frequency(event.note, 'midi').toNote(),
-                isValid: false,
-            };
-        });
-    }
-
-    cleanInputs(inputs) {
-        return inputs.filter(event => event.event === NOTE_ON).map((event) => {
-            return {
-                note: Frequency(event.note, 'midi').toNote(),
-                isValid: false,
-            };
-        });
+        if (this.validInputs.length === this.targets.length) {
+            this.isValid = true;
+        }
     }
 }
