@@ -33,3 +33,5 @@ http://imanmalik.com/cs/2017/06/05/neural-style.html
 https://magenta.tensorflow.org/performance-rnn
 https://github.com/tensorflow/magenta/tree/master/magenta/models
 http://web.mit.edu/music21/doc/index.html
+https://www.kaggle.com/wfaria/midi-music-data-extraction-using-music21
+https://towardsdatascience.com/how-to-generate-music-using-a-lstm-neural-network-in-keras-68786834d4c5

@@ -39,7 +39,7 @@ class MelodyGuess extends Vue {
     result = null;
     status = null;
 
-    generateSeconds = 3;
+    generateSeconds = 5;
     eventsManager = null;
 
     async created() {
@@ -53,6 +53,7 @@ class MelodyGuess extends Vue {
             });
             this.ready = true;
         } catch (error) {
+            console.error(error);
             this.error = error.message;
         }
     }

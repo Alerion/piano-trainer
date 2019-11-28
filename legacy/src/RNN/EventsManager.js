@@ -12,7 +12,7 @@ const INPUT_RESET_TIME = 2;
 
 
 export default class EventsManager {
-    constructor({ device, rnn, timeScale = 1 }) {
+    constructor({ device, rnn, timeScale = 1.5 }) {
         this.device = device;
         this.rnn = rnn;
         this.timeScale = timeScale;
@@ -80,7 +80,11 @@ export default class EventsManager {
                 break;
             }
         });
-        // TODO: noteOff all activeNotes in 3 seconds
+
+        time += 1;
+        _.forOwn(activeNotes, (noteTime, note) => {
+            _.delay(noteOff, time * 1000 * this.timeScale, note);
+        });
     }
 
     onDeviceNoteOn(event) {
