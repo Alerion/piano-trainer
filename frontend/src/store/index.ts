@@ -1,7 +1,7 @@
 import * as _ from 'lodash'
 import { configureStore } from '@reduxjs/toolkit'
 
-import { Actions } from '@/lib/reduxStore/types'
+import { Actions } from '@/lib/reduxStore'
 import { slices, reducer } from './slices'
 
 
@@ -17,3 +17,6 @@ slices.forEach((slice) => {
     actions[action.type] = action
   })
 })
+
+// For simpler import keep this here
+export { mapActions } from '@/lib/reduxStore'
