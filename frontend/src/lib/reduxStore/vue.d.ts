@@ -1,7 +1,7 @@
 /**
  * Extends interfaces in Vue.js
  */
-import Vue from 'vue' // Import Vue at first. From documentation
+import Vue from 'vue'
 import { Store, Unsubscribe } from 'redux'
 
 import { Actions, MapState, Bindings } from './types'

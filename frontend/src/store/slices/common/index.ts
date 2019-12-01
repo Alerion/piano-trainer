@@ -9,3 +9,8 @@ export const slice = createSlice({
   initialState,
   reducers,
 })
+
+const persistent: Array<keyof typeof initialState> = ['language'] // Use type for keys checking
+
+slice.persistent = persistent
+slice.initialState = initialState
