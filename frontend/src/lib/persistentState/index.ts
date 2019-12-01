@@ -25,7 +25,6 @@ function realiseObject(objectPath: Path, objectInitialValue = {}) {
 }
 
 function saveToLocalStore(storeState: State, paths: Path[], workspaceId: WorkspaceId) {
-  // TODO: Add throttle here
   const namespace = `${NAMESPACE}_${workspaceId}`
 
   if (paths.length === 0) {
@@ -78,13 +77,16 @@ export function load(paths: Path[], workspaceId: WorkspaceId): State {
   return loadedState
 }
 
-export function getSaveToStoreMiddleware(workspaceId: WorkspaceId, slices: Slice[]): Middleware {
+export function getSaveToStoreMiddleware(
+  workspaceId: WorkspaceId, slices: Slice[], debounce: number = 200,
+): Middleware {
   const persistPaths = getPersistPathsFromSlices(slices)
+  const save = _.debounce(saveToLocalStore, debounce)
 
   return (api: MiddlewareAPI) => (next: Dispatch<AnyAction>) => (action: AnyAction) => {
     const returnValue = next(action)
     const storeState = api.getState()
-    return saveToLocalStore(storeState, persistPaths, workspaceId)
+    return save(storeState, persistPaths, workspaceId)
   }
 }
 
