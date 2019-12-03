@@ -17,12 +17,12 @@
             >
               <v-list-item three-line>
                 <v-list-item-content>
-                  <div class="overline mb-4">{{item.group}}</div>
+                  <div class="overline mb-4">{{ item.group }}</div>
                   <v-list-item-title class="headline mb-1">
-                    {{item.title}}
+                    {{ item.title }}
                   </v-list-item-title>
                   <v-list-item-subtitle>
-                    {{item.description}}
+                    {{ item.description }}
                   </v-list-item-subtitle>
                 </v-list-item-content>
 
@@ -45,29 +45,30 @@
 </template>
 
 <script>
-const learnt = ['class1']
+const learnt = ['exercise1']
+
 export default {
-  name: 'ClassList',
+  name: 'LessonList',
 
   data() {
     return {
       items: [
         {
-          title: 'Class 1',
-          name: 'class1',
-          group: 'GROUP 1',
+          title: 'Exercise 1',
+          name: 'exercise1',
+          group: 'LESSON 1',
           description: 'The short (I think short, but I\'m no sure) description',
         },
         {
-          title: 'Class 2',
-          name: 'class2',
-          group: 'GROUP 1',
+          title: 'Exercise 2',
+          name: 'exercise2',
+          group: 'LESSON 1',
           description: 'The short (I think short, but I\'m no sure) description',
         },
         {
-          title: 'Class 3',
-          name: 'class3',
-          group: 'GROUP 1',
+          title: 'Exercise 3',
+          name: 'exercise2',
+          group: 'LESSON 1',
           description: 'The short (I think short, but I\'m no sure) description',
         },
       ],
